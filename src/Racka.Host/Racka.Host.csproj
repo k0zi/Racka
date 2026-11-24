@@ -24,8 +24,8 @@
         <PackageTags>agents;multi-agent;llm;claude;claude-code;codex;openai;ollama;mcp;cli</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <RepositoryUrl>https://github.com/k0zi/Sheep</RepositoryUrl>
-        <PackageProjectUrl>https://github.com/k0zi/Sheep</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/k0zi/Racka</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/k0zi/Racka</PackageProjectUrl>
         <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
