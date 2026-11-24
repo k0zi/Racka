@@ -128,3 +128,22 @@ cd src && dotnet build Racka.slnx && dotnet test Racka.slnx
 
 A tesztek nem hívnak valódi modellt; helyettük fake provider, rögzített HTTP-válaszok, hamis `claude` és `codex` szkriptek,
 egy in-process MCP szerver és egy fake IRC szerver fut. Valódi agent-hostok Unix socketen beszélgetnek egymással.
+
+## Verziózás és kiadás
+
+A verziót a [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) adja `év.hónap.git-magasság`
+formában (pl. `26.11.3`): az évet és a hónapot a `version.json` tartalmazza, a patch szám pedig a commitok száma
+a `version.json` utolsó módosítása óta. Hónapváltáskor a `version.json`-ban kézzel kell átírni a `version` mezőt
+(ne `nbgv set-version`-nel, mert az kitörli a `publicReleaseRefSpec`-et), és a commit után a patch újra 0-ról indul.
+
+A `.github/workflows/build.yml` minden `main`-re pusholt commitot és PR-t lefordít, tesztel és becsomagol; a `.nupkg`
+a futás artifactjai között érhető el. A nuget.org-ra feltöltést egy `v<verzió>` tag indítja, NuGet trusted
+publishinggel (tárolt API kulcs nélkül):
+
+```bash
+dotnet tool restore
+dotnet nbgv tag                  # HEAD felcímkézése v<a kiszámolt verzió>-val
+git push origin v26.11.3         # a kiírt tag
+```
+
+A tagnek egyeznie kell a commitra kiszámolt verzióval, ezért ne kézzel válassz számot: ha eltér, a workflow leáll.

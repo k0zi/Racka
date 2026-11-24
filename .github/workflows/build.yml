@@ -22,19 +22,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Nerdbank.GitVersioning needs the full history for the git height
 
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
-      # A v1.2.3 tag gives package version 1.2.3; any other build gets a CI pre-release version.
-      - name: Determine version
+      # Version = year.month from version.json + git height, e.g. 26.11.3. Builds outside main and the
+      # v* tags (pull requests) get a -g<commit> pre-release suffix.
+      - name: Version
         id: version
         run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=0.0.0-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          dotnet tool restore
+          version=$(dotnet nbgv get-version --variable NuGetPackageVersion)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version: $version"
+          if [[ "$GITHUB_REF" == refs/tags/v* && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match the computed version $version. Tag with 'dotnet nbgv tag'."
+            exit 1
+          fi
+          if [[ "$(dotnet nbgv get-version --variable MajorMinorVersion)" != "$(date -u +%y.%-m)" ]]; then
+            echo "::warning::version.json is not on the current year.month ($(date -u +%y.%-m)), bump it."
           fi
 
       - name: Restore
@@ -53,7 +62,6 @@ jobs:
           dotnet pack "$PACKAGE_PROJECT"
           --configuration Release
           --output artifacts
-          -p:Version=${{ steps.version.outputs.version }}
 
       - uses: actions/upload-artifact@v5
         with:
