@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 
-namespace Racka.Irc;
+namespace Racka.Chat.Irc;
 
 public sealed record IrcConnectionOptions(
     string Server,

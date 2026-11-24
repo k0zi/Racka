@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Racka.Core\Racka.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Teams connector hosts its own Kestrel endpoint for the Bot Connector service. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Discord.Net.WebSocket" Version="3.20.2" />
+    <PackageReference Include="Microsoft.Agents.Authentication.Msal" Version="1.9.205" />
+    <PackageReference Include="Microsoft.Agents.Hosting.AspNetCore" Version="1.9.205" />
+    <PackageReference Include="Telegram.Bot" Version="22.10.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Racka.Tests" />
+  </ItemGroup>
+
+</Project>

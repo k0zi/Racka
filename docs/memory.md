@@ -61,5 +61,5 @@ memory:
 
 A `memory/` mappák gitignore-ban vannak. Ha verziózni akarod őket, töröld a megfelelő sort a `.gitignore` fájlból.
 
-**Biztonság:** egy IRC-ről érkező feladat is írhat memóriát, és az a későbbi promptokba is bekerül. Ezért az
-`operators` hostmaszkot itt is szűkre kell venni ([IRC](irc.md#jogosultság)).
+**Biztonság:** egy chatről érkező feladat is írhat memóriát, és az a későbbi promptokba is bekerül. Ezért az
+`operators` listát itt is szűkre kell venni ([Chat](chat.md#jogosultság)).

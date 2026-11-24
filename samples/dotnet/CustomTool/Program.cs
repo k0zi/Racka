@@ -4,6 +4,7 @@
 //   cd samples/dotnet/CustomTool && dotnet run            # runs ./agent (the "shepherd" agent)
 //   racka send shepherd "Nyiss egy ticketet Merinónak: a wordcount.py ne számolja a sorvégi szóközt." --wait
 using Racka.Core.Agents;
+using Racka.Core.Config;
 using Racka.Core.Messaging;
 using Racka.Host;
 using Racka.Providers;
@@ -16,8 +17,10 @@ Console.CancelKeyPress += (_, e) =>
     cts.Cancel();
 };
 
-var agent = AgentDefinition.Load(args.Length > 0 ? args[0] : "agent");
+// Like `racka run`: the chat connections and runtime directory of the user settings apply here too.
+var settings = UserSettings.Load();
+var agent = AgentDefinition.Load(args.Length > 0 ? args[0] : "agent", layers: ConfigLayers.From(settings));
 var board = new TicketBoard(Path.Combine(agent.StateDirectory, "tickets.json"));
 
-return await AgentHost.RunAsync(agent, new BusPaths(), AgentEngineFactory.Create, cts.Token,
+return await AgentHost.RunAsync(agent, BusPaths.Resolve(null, settings.RuntimeDir), AgentEngineFactory.Create, cts.Token,
     extraTools: [new TicketCreateTool(board), new TicketListTool(board), new TicketCloseTool(board)]);

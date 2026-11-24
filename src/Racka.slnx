@@ -9,6 +9,6 @@
   <Project Path="HerdFlow/HerdFlow.csproj" />
   <Project Path="Racka.Core/Racka.Core.csproj" />
   <Project Path="Racka.Host/Racka.Host.csproj" />
-  <Project Path="Racka.Irc/Racka.Irc.csproj" />
+  <Project Path="Racka.Chat/Racka.Chat.csproj" />
   <Project Path="Racka.Providers/Racka.Providers.csproj" />
 </Solution>

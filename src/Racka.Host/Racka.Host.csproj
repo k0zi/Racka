@@ -31,12 +31,16 @@
 
     <ItemGroup>
         <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
+        <!-- Third-party license texts for the redistributed libraries (see THIRD_PARTY_NOTICES.md). -->
+        <None Include="..\..\LICENSE" Pack="true" PackagePath="\" Visible="false" />
+        <None Include="..\..\THIRD_PARTY_NOTICES.md" Pack="true" PackagePath="\" Visible="false" />
+        <None Include="..\..\licenses\*.txt" Pack="true" PackagePath="licenses\" Visible="false" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Racka.Core\Racka.Core.csproj" />
         <ProjectReference Include="..\Racka.Providers\Racka.Providers.csproj" />
-        <ProjectReference Include="..\Racka.Irc\Racka.Irc.csproj" />
+        <ProjectReference Include="..\Racka.Chat\Racka.Chat.csproj" />
     </ItemGroup>
 
     <ItemGroup>

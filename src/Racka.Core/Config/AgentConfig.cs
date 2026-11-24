@@ -35,6 +35,15 @@ public sealed class AgentConfig
     public CodexOptions Codex { get; set; } = new();
     public MemoryOptions Memory { get; set; } = new();
     public IrcConfig? Irc { get; set; }
+    public DiscordConfig? Discord { get; set; }
+    public SlackConfig? Slack { get; set; }
+    public TeamsConfig? Teams { get; set; }
+    public TelegramConfig? Telegram { get; set; }
+
+    /// <summary>The chat sections that are configured and not switched off with <c>enabled: false</c>.</summary>
+    [YamlIgnore]
+    public IReadOnlyList<ChatConfig> ChatConnections =>
+        new ChatConfig?[] { Irc, Discord, Slack, Teams, Telegram }.OfType<ChatConfig>().Where(c => c.Enabled).ToList();
 
     [YamlIgnore]
     public EngineKind EngineKind => Engine.ToLowerInvariant() switch
@@ -111,20 +120,107 @@ public sealed class McpServerConfig
     public bool IsStdio => !string.IsNullOrEmpty(Command);
 }
 
-public sealed class IrcConfig
+/// <summary>Settings every chat platform shares: who may give tasks, where events go and how replies look.</summary>
+public abstract class ChatConfig
 {
+    /// <summary>Configuration key of the platform: irc, discord, slack, teams or telegram.</summary>
+    [YamlIgnore]
+    public abstract string Platform { get; }
+
+    /// <summary>false switches off a connection inherited from the user settings.</summary>
+    public bool Enabled { get; set; } = true;
+    /// <summary>IRC: channels to join. Elsewhere: channel ids to listen in; empty means every channel the bot is in.</summary>
+    public List<string> Channels { get; set; } = new();
+    /// <summary>Where lifecycle events (online, task started/done/failed) and chat_report messages go.</summary>
+    public string? ReportChannel { get; set; }
+    /// <summary>Who may give tasks and commands. IRC: nick!user@host masks. Elsewhere: user ids.</summary>
+    public List<string> Operators { get; set; } = new();
+    public string CommandPrefix { get; set; } = "!";
+    public int MaxReplyLines { get; set; } = 40;
+
+    /// <summary>The report channel, or the first channel when none is set.</summary>
+    [YamlIgnore]
+    public string? ReportTarget => ReportChannel ?? Channels.FirstOrDefault();
+
+    /// <summary>Replaces {agent} (the agent name) and {AGENT} (upper case, '-' as '_') in the name-like fields.</summary>
+    public virtual void ApplyAgentName(string agentName) { }
+
+    protected static string? Expand(string? value, string agentName) =>
+        value?.Replace("{agent}", agentName, StringComparison.Ordinal)
+            .Replace("{AGENT}", agentName.ToUpperInvariant().Replace('-', '_'), StringComparison.Ordinal);
+}
+
+public sealed class IrcConfig : ChatConfig
+{
+    public IrcConfig() => MaxReplyLines = 8;
+
+    public override string Platform => "irc";
     public string Server { get; set; } = "";
     public int Port { get; set; } = 6697;
     public bool Tls { get; set; } = true;
+    /// <summary>Defaults to the agent name.</summary>
     public string Nick { get; set; } = "";
     public string? User { get; set; }
     public string? RealName { get; set; }
-    public List<string> Channels { get; set; } = new();
-    public string? ReportChannel { get; set; }
-    public List<string> Operators { get; set; } = new();
     public string? SaslPasswordEnv { get; set; }
-    public string CommandPrefix { get; set; } = "!";
-    public int MaxReplyLines { get; set; } = 8;
+
+    public override void ApplyAgentName(string agentName)
+    {
+        Nick = string.IsNullOrWhiteSpace(Nick) ? agentName : Expand(Nick, agentName)!;
+        User = Expand(User, agentName);
+        RealName = Expand(RealName, agentName);
+        SaslPasswordEnv = Expand(SaslPasswordEnv, agentName);
+    }
+}
+
+public sealed class DiscordConfig : ChatConfig
+{
+    public override string Platform => "discord";
+    public string TokenEnv { get; set; } = "{AGENT}_DISCORD_TOKEN";
+
+    public override void ApplyAgentName(string agentName) => TokenEnv = Expand(TokenEnv, agentName)!;
+}
+
+public sealed class SlackConfig : ChatConfig
+{
+    public override string Platform => "slack";
+    /// <summary>Bot token (xoxb-…) for the Web API.</summary>
+    public string BotTokenEnv { get; set; } = "{AGENT}_SLACK_BOT_TOKEN";
+    /// <summary>App-level token (xapp-…) with connections:write, for Socket Mode.</summary>
+    public string AppTokenEnv { get; set; } = "{AGENT}_SLACK_APP_TOKEN";
+
+    public override void ApplyAgentName(string agentName)
+    {
+        BotTokenEnv = Expand(BotTokenEnv, agentName)!;
+        AppTokenEnv = Expand(AppTokenEnv, agentName)!;
+    }
+}
+
+public sealed class TeamsConfig : ChatConfig
+{
+    public override string Platform => "teams";
+    /// <summary>Microsoft App ID of the Azure Bot registration.</summary>
+    public string AppId { get; set; } = "";
+    /// <summary>Entra tenant of the app registration (single tenant bots).</summary>
+    public string TenantId { get; set; } = "";
+    public string ClientSecretEnv { get; set; } = "{AGENT}_TEAMS_CLIENT_SECRET";
+    /// <summary>Address of the HTTP listener for /api/messages; put a tunnel or an HTTPS reverse proxy in front of it.</summary>
+    public string BindAddress { get; set; } = "127.0.0.1";
+    public int Port { get; set; } = 3978;
+
+    public override void ApplyAgentName(string agentName)
+    {
+        AppId = Expand(AppId, agentName)!;
+        ClientSecretEnv = Expand(ClientSecretEnv, agentName)!;
+    }
+}
+
+public sealed class TelegramConfig : ChatConfig
+{
+    public override string Platform => "telegram";
+    public string TokenEnv { get; set; } = "{AGENT}_TELEGRAM_TOKEN";
+
+    public override void ApplyAgentName(string agentName) => TokenEnv = Expand(TokenEnv, agentName)!;
 }
 
 public sealed class ConfigException(string message) : Exception(message);

@@ -5,6 +5,10 @@ public static class TaskSources
     public const string Cli = "cli";
     public const string Bus = "bus";
     public const string Irc = "irc";
+    public const string Discord = "discord";
+    public const string Slack = "slack";
+    public const string Teams = "teams";
+    public const string Telegram = "telegram";
 }
 
 /// <param name="ConversationKey">Tasks with the same key continue the same conversation.</param>

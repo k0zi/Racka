@@ -37,7 +37,8 @@ public sealed record AgentStatus(
     int ProcessId,
     bool IrcConnected,
     int CompletedTasks,
-    int FailedTasks);
+    int FailedTasks,
+    IReadOnlyList<string>? Chat = null);
 
 public sealed record ToolDescriptor(string Name, string Description, JsonElement InputSchema);
 

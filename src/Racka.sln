@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Racka.Core", "Racka.Core\Ra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Racka.Providers", "Racka.Providers\Racka.Providers.csproj", "{7AA68514-049E-439E-BDAC-A316013149F6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Racka.Irc", "Racka.Irc\Racka.Irc.csproj", "{EADA85EB-26E6-481E-BC22-55E944CBF2FA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Racka.Chat", "Racka.Chat\Racka.Chat.csproj", "{EADA85EB-26E6-481E-BC22-55E944CBF2FA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Racka.Host", "Racka.Host\Racka.Host.csproj", "{BDA440E5-3634-4CA1-ADE8-793712DA89CF}"
 EndProject

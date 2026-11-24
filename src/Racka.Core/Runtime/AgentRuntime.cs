@@ -28,7 +28,8 @@ public sealed class AgentRuntime
     public IAgentEngine Engine { get; }
     public IAgentEvents Events { get; }
     public DateTimeOffset StartedAt { get; } = DateTimeOffset.UtcNow;
-    public Func<bool> IrcConnected { get; set; } = () => false;
+    /// <summary>The chat platforms the agent is connected to right now (irc, discord, slack, teams, telegram).</summary>
+    public Func<IReadOnlyList<string>> ChatConnected { get; set; } = () => [];
 
     public AgentTask? CurrentTask
     {
@@ -70,6 +71,7 @@ public sealed class AgentRuntime
 
     public AgentStatus GetStatus()
     {
+        var chat = ChatConnected();
         lock (_gate)
         {
             return new AgentStatus(
@@ -82,9 +84,10 @@ public sealed class AgentRuntime
                 Math.Max(0, Volatile.Read(ref _queueLength) - (_current == null ? 0 : 1)),
                 StartedAt,
                 Environment.ProcessId,
-                IrcConnected(),
+                chat.Contains("irc"),
                 Volatile.Read(ref _completed),
-                Volatile.Read(ref _failed));
+                Volatile.Read(ref _failed),
+                chat);
         }
     }
 

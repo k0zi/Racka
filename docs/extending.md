@@ -39,10 +39,13 @@ A teljes minta, egy JSON-ban tárolt ticket-tábla három toollal: [`samples/dot
 Az `AgentHost.RunAsync` ugyanazt az agentet indítja, mint a `racka run`, de a hívó további toolokat adhat meg:
 
 ```csharp
-var agent = AgentDefinition.Load("agents/shepherd");
-await AgentHost.RunAsync(agent, new BusPaths(), AgentEngineFactory.Create, ct,
+var settings = UserSettings.Load();   // ~/.config/racka/config.yaml: chat-kapcsolatok, runtimeDir
+var agent = AgentDefinition.Load("agents/shepherd", layers: ConfigLayers.From(settings));
+await AgentHost.RunAsync(agent, BusPaths.Resolve(null, settings.RuntimeDir), AgentEngineFactory.Create, ct,
     extraTools: [new DiceTool(), new TicketCreateTool(board)]);
 ```
+
+A `layers` nélkül csak az `agent.yaml` számít, a felhasználói beállítások nem.
 
 Az `extraTools` **mindegyik engine-nel működik**. Az API engine-ek közvetlenül hívják őket, a Claude Code és a
 Codex pedig a bridge-en át. A bridge-et a CLI engine a `racka` paranccsal indítja. Saját hostnál ez a projektre
@@ -50,7 +53,7 @@ hivatkozó `Racka.Host` mellé másolt `racka` fájl lesz, amelyet a `RACKA_EXEC
 bridge a saját hostod socketjéhez kapcsolódik, így a saját toolokat is látja.
 
 Projekt-hivatkozás: `<ProjectReference Include="…/src/Racka.Host/Racka.Host.csproj" />`
-(ez behúzza a `Racka.Core`, `Racka.Providers` és `Racka.Irc` projekteket is).
+(ez behúzza a `Racka.Core`, `Racka.Providers` és `Racka.Chat` projekteket is).
 
 Saját engine-factoryval a toolok engine-enként is szűrhetők, vagy saját `IAgentEngine` adható vissza:
 

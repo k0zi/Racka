@@ -3,7 +3,11 @@ using Racka.Core.Agents;
 
 namespace Racka.Core.Engine;
 
-public sealed record PromptOptions(bool IncludeSkillIndex, bool CanMessageAgents, bool HasIrc);
+/// <param name="ChatPlatforms">The chat platforms the agent is connected to (irc, discord, slack, teams, telegram).</param>
+public sealed record PromptOptions(bool IncludeSkillIndex, bool CanMessageAgents, IReadOnlyList<string>? ChatPlatforms = null)
+{
+    public bool HasChat => ChatPlatforms is { Count: > 0 };
+}
 
 /// <summary>
 /// Builds the system prompt and the per-task user message. The system prompt only changes when the memory index
@@ -18,15 +22,15 @@ public static class PromptBuilder
         sb.AppendLine();
         sb.AppendLine("# Racka runtime");
         sb.AppendLine($"You are the agent named \"{agent.Name}\" in the Racka multi-agent framework.");
-        sb.AppendLine("Each message you receive starts with a header naming where the task came from (cli, bus or irc) and who sent it.");
+        sb.AppendLine("Each message you receive starts with a header naming where the task came from (cli, bus, or a chat platform such as irc, discord, slack, teams or telegram) and who sent it.");
         sb.AppendLine("Your final answer is delivered back to that sender, so finish with a clear, self-contained result.");
         if (options.CanMessageAgents)
         {
             sb.AppendLine("You can reach other agents with the send_message tool and discover them with list_agents.");
             sb.AppendLine("Delegate only when another agent is better suited; never forward a task back to the agent that sent it.");
         }
-        if (options.HasIrc)
-            sb.AppendLine("You are connected to IRC. Use irc_report for short status updates that humans should see; keep them to one line.");
+        if (options.HasChat)
+            sb.AppendLine($"You are connected to chat ({string.Join(", ", options.ChatPlatforms!)}). Use chat_report for short status updates that humans should see; keep them to one line.");
 
         if (options.IncludeSkillIndex && agent.Skills.All.Count > 0)
         {

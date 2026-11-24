@@ -12,7 +12,7 @@ namespace Racka.Tests;
 
 public class MemoryTests
 {
-    private static readonly PromptOptions Options = new(IncludeSkillIndex: true, CanMessageAgents: false, HasIrc: false);
+    private static readonly PromptOptions Options = new(IncludeSkillIndex: true, CanMessageAgents: false);
 
     private static AgentDefinition AgentWithMemory(TempDir dir, int maxIndexChars = 8000)
     {

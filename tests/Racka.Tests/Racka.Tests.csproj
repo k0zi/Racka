@@ -21,7 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Racka.Core\Racka.Core.csproj" />
     <ProjectReference Include="..\..\src\Racka.Providers\Racka.Providers.csproj" />
-    <ProjectReference Include="..\..\src\Racka.Irc\Racka.Irc.csproj" />
+    <ProjectReference Include="..\..\src\Racka.Chat\Racka.Chat.csproj" />
     <ProjectReference Include="..\..\src\Racka.Host\Racka.Host.csproj" />
   </ItemGroup>
 

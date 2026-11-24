@@ -39,7 +39,7 @@ Minden agent a stdout-ra naplóz, soronként:
 ```
 
 Az események: `AgentStarted`, `TaskQueued`, `TaskStarted`, `ToolCalled`, `Progress`, `TaskCompleted`, `TaskFailed`,
-`Report`, `AgentStopping`. Az indulás, a kész, a hiba és a riport az IRC riport-csatornára is kimegy, ha be van állítva.
+`Report`, `AgentStopping`. Az indulás, a kész, a hiba és a riport a chat-platformok riport-csatornájára is kimegy, ha be van állítva.
 
 ## Biztonság
 
@@ -50,10 +50,11 @@ Az események: `AgentStarted`, `TaskQueued`, `TaskStarted`, `ToolCalled`, `Progr
 | `claudeCode.allowedTools`, `permissionMode` | mit futtathat a Claude Code agent | reviewernek `dontAsk` mód és szűk lista; `bypassPermissions` csak izolált gépen |
 | `codex.sandbox` | hová írhat a Codex agent | `workspace-write`; `danger-full-access` csak izolált gépen |
 | `maxBudgetUsd`, `maxIterations` | a költség és a hurkok | minden fizetős agentre érdemes korlátot tenni |
-| IRC `operators` | ki adhat feladatot | szűk hostmaszk és SASL; részletek: [IRC](irc.md#jogosultság) |
+| chat `operators` | ki adhat feladatot IRC-n, Telegramon, Discordon, Slacken, Teamsen | IRC-n szűk hostmaszk és SASL, máshol felhasználói id; részletek: [Chat](chat.md#jogosultság) |
+| Teams végpont | a nyilvános `/api/messages` | csak a Bot Framework aláírt, az app id-re szóló tokenje megy át; a listener alapból `127.0.0.1`-en van |
 
 Ne feledd, hogy a delegálás a bizalmat is továbbadja: ha Shaun bárkitől fogad feladatot, akkor rajta keresztül
-bárki dolgoztathatja Merinót is. A külső csatornák (IRC, saját toolok, MCP szerverek) bemenete egy agenten
+bárki dolgoztathatja Merinót is. A külső csatornák (chat-platformok, saját toolok, MCP szerverek) bemenete egy agenten
 át eljuthat a többihez, sőt a memóriába is bekerülhet.
 
 ## Hibakeresés
@@ -69,6 +70,6 @@ bárki dolgoztathatja Merinót is. A külső csatornák (IRC, saját toolok, MCP
 | Helyi modell nem hív toolt | a modell nem támogatja a tool callingot; válassz másikat (`qwen3`, `llama3.1`) |
 | `ask cycle: …` | két agent egymásra várna; ez szándékos védelem, a modell a kérdés nélkül folytatja |
 | `timed out after 600s; the task keeps running` | hosszú feladat; nagyobb `--timeout` / `timeout_s`, vagy tell és visszajelzés |
-| Egy beszélgetés „megbolondult” | `racka send … -c új-kulcs`, IRC-n `!reset`; a CLI engine-eknél a `state/*sessions.json` törlése |
+| Egy beszélgetés „megbolondult” | `racka send … -c új-kulcs`, chatben `!reset`; a CLI engine-eknél a `state/*sessions.json` törlése |
 
 A bridge kézzel is kipróbálható: `racka bridge --agent merino` egy stdio MCP szerver, amely az agent socketjére továbbít.

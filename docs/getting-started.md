@@ -19,6 +19,11 @@ dotnet tool install -g Racka          # frissítés: dotnet tool update -g Racka
 racka --help
 ```
 
+Az első futás létrehozza a felhasználói beállításokat a `~/.config/racka/config.yaml` fájlban (Windowson
+`%APPDATA%\racka`). Ide kerülnek a minden agentre érvényes beállítások, például hogy melyik IRC szerverre és
+csatornára csatlakozzanak: `racka config set irc.server irc.libera.chat`
+([Konfiguráció](configuration.md#felhasználói-beállítások), [Chat](chat.md)).
+
 Forrásból is telepítheted, dotnet toolként vagy sima publish-sal:
 
 ```bash
@@ -47,7 +52,7 @@ Ez létrehozza az `agents/bob/` mappát:
 
 ```
 agents/bob/
-  agent.yaml     konfiguráció (engine, modell, toolok, MCP, IRC, memória)
+  agent.yaml     konfiguráció (engine, modell, toolok, MCP, chat, memória)
   soul.md        a személyiség, a system prompt eleje
   skills/        saját skillek
   .gitignore     state/, workspace/, memory/
@@ -121,11 +126,11 @@ racka list
 ```
 
 ```
-NAME             ENGINE       MODEL                STATE  QUEUE  DONE  FAIL IRC  PID
-dolly            claude-code  claude-opus-5-5      idle       0     0     0 -    81721
-lamb             openai       qwen3:8b             idle       0     0     0 -    81722
-merino           codex        -                    idle       0     0     0 -    81723
-shaun            anthropic    claude-opus-5-5      idle       0     0     0 -    81724
+NAME             ENGINE       MODEL                STATE  QUEUE  DONE  FAIL CHAT           PID
+dolly            claude-code  claude-opus-5-5      idle       0     0     0 -              81721
+lamb             openai       qwen3:8b             idle       0     0     0 -              81722
+merino           codex        -                    idle       0     0     0 -              81723
+shaun            anthropic    claude-opus-5-5      idle       0     0     0 -              81724
 ```
 
 Adj munkát Shaunnak, és figyeld a naplókat (`samples/scripts/herd.sh logs merino`):

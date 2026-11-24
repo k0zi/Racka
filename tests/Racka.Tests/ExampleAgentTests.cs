@@ -27,7 +27,7 @@ public class ExampleAgentTests
 
         Assert.Equal(engine, agent.Config.EngineKind);
         Assert.NotNull(agent.Memory);
-        var prompt = PromptBuilder.BuildSystemPrompt(agent, new PromptOptions(true, true, false));
+        var prompt = PromptBuilder.BuildSystemPrompt(agent, new PromptOptions(true, true));
         if (skill != null)
         {
             Assert.NotNull(agent.Skills.Find(skill));

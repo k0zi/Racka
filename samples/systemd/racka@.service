@@ -13,7 +13,7 @@ Description=Racka agent %i
 After=network-online.target
 
 [Service]
-# Secrets such as ANTHROPIC_API_KEY or DOLLY_IRC_PASSWORD, one KEY=value per line (chmod 600).
+# Secrets such as ANTHROPIC_API_KEY, DOLLY_IRC_PASSWORD or DOLLY_TELEGRAM_TOKEN, one KEY=value per line (chmod 600).
 EnvironmentFile=-%h/.config/racka/%i.env
 WorkingDirectory=%h/Racka
 ExecStart=%h/.local/bin/racka run %h/Racka/agents/%i

@@ -8,7 +8,7 @@
 | `list_agents` | mindig | a futó agentek listája motorral és állapottal |
 | `memory_save`, `memory_read`, `memory_search`, `memory_delete` | ha a memória be van kapcsolva | [Memória](memory.md) |
 | `load_skill`, `read_skill_file` | ha van skill, és az engine nem `claude-code` | a skill tartalmának betöltése |
-| `irc_report` | ha be van állítva `irc` | egysoros státuszüzenet a riport-csatornára |
+| `chat_report` | ha van chat-kapcsolat | egysoros státuszüzenet a riport-csatornákra ([Chat](chat.md#riport-csatorna)) |
 | saját toolok | ha a host megadja őket | [Bővítés](extending.md#saját-tool) |
 
 Az API engine-ek ezeket közvetlenül hívják. A Claude Code és a Codex a `racka bridge` MCP szerveren át éri el

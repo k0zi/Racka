@@ -14,7 +14,7 @@ internal static class Scaffolder
             throw new ConfigException($"'{dir}' already exists and is not empty.");
 
         Directory.CreateDirectory(Path.Combine(dir, "skills"));
-        File.WriteAllText(Path.Combine(dir, "agent.yaml"), AgentYaml(name, config.EngineKind));
+        File.WriteAllText(Path.Combine(dir, "agent.yaml"), AgentYaml(name, config.EngineKind) + ChatYaml);
         File.WriteAllText(Path.Combine(dir, "soul.md"), Soul(name));
         File.WriteAllText(Path.Combine(dir, ".gitignore"), "state/\nworkspace/\nmemory/\n");
         return dir;
@@ -37,12 +37,6 @@ internal static class Scaffolder
             # memory:              # long-term memory in ./memory (on by default)
             #   enabled: true
             #   maxIndexChars: 8000
-            # irc:
-            #   server: irc.libera.chat
-            #   nick: {name}
-            #   channels: ["#racka"]
-            #   reportChannel: "#racka-status"
-            #   operators: ["yournick!*@*"]
 
             """,
         EngineKind.Codex => $"""
@@ -91,6 +85,21 @@ internal static class Scaffolder
 
             """
     };
+
+    /// <summary>Chat sections; the same keys in the user settings (racka config) apply to every agent.</summary>
+    private const string ChatYaml = """
+        # Chat: these sections override the same ones in the user settings (racka config show); enabled: false switches one off.
+        # irc:
+        #   server: irc.libera.chat
+        #   channels: ["#racka"]
+        #   reportChannel: "#racka-status"
+        #   operators: ["yournick!*@your.host"]
+        # telegram: { tokenEnv: "{AGENT}_TELEGRAM_TOKEN", operators: ["123456789"] }
+        # discord:  { tokenEnv: "{AGENT}_DISCORD_TOKEN", operators: ["123456789012345678"] }
+        # slack:    { botTokenEnv: "{AGENT}_SLACK_BOT_TOKEN", appTokenEnv: "{AGENT}_SLACK_APP_TOKEN", operators: ["U0123456789"] }
+        # teams:    { appId: "…", tenantId: "…", clientSecretEnv: "{AGENT}_TEAMS_CLIENT_SECRET", port: 3978 }
+
+        """;
 
     private static string Soul(string name) => $"""
         # {char.ToUpperInvariant(name[0])}{name[1..]}

@@ -44,7 +44,7 @@ model: ${LAMB_MODEL:-qwen3:8b}
 | `sharedSkillsDir` | `../../skills` | a közös skillek mappája |
 | `mcpServers` | `{}` | MCP szerverek, lásd lent |
 | `memory` | bekapcsolva | lásd lent |
-| `irc` | nincs | lásd [IRC](irc.md) |
+| `irc`, `telegram`, `discord`, `slack`, `teams` | nincs | chat-kapcsolatok, lásd [Chat](chat.md); a felhasználói beállításokból is jöhetnek |
 
 ### `mcpServers`
 
@@ -126,15 +126,53 @@ codex:
   extraArgs: []                # további `codex exec` kapcsolók
 ```
 
-### `irc`
+### Chat-szekciók
 
-Lásd [IRC](irc.md#konfiguráció).
+Lásd [Chat](chat.md). Ezek a szekciók a felhasználói beállításokban is megadhatók, és az `agent.yaml` mezőnként
+felülírja őket.
+
+## Felhasználói beállítások
+
+A `~/.config/racka/config.yaml` (Windowson `%APPDATA%\racka\config.yaml`) a felhasználó összes agentjére érvényes.
+Az első `racka` futás hozza létre egy kommentezett sablonnal (a mappa `0700`, a fájl `0600`), mert a
+`dotnet tool install` nem futtat kódot. A helyét a `$RACKA_CONFIG_DIR` felülírja, a `racka config path` kiírja.
+
+```yaml
+runtimeDir: ~/.racka/run          # a socketek könyvtára
+irc:                              # minden agent csatlakozik, a nick az agent neve
+  server: irc.libera.chat
+  channels: ["#racka"]
+  operators: ["yournick!*@your.host"]
+telegram:
+  tokenEnv: "{AGENT}_TELEGRAM_TOKEN"
+  operators: ["123456789"]
+```
+
+| Kulcs | Leírás |
+|---|---|
+| `runtimeDir` | a socketek könyvtára; a `--runtime-dir` és a `RACKA_RUNTIME_DIR` erősebb |
+| `irc`, `telegram`, `discord`, `slack`, `teams` | közös chat-kapcsolatok ([Chat](chat.md#hol-állítható-be)) |
+
+Szerkesztés parancssorból (a kulcsot és a típust ellenőrzi, a kommenteket viszont elhagyja):
+
+| Parancs | Hatás |
+|---|---|
+| `racka config path` | a fájl útvonala |
+| `racka config show` | a fájl tartalma |
+| `racka config get <kulcs>` | egy érték, pl. `irc.server` |
+| `racka config set <kulcs> <érték>` | érték beállítása; listánál vesszővel elválasztva |
+| `racka config unset <kulcs>` | érték törlése |
+| `racka config init --force` | a sablon újraírása |
+
+A `--agent <könyvtár>` kapcsolóval ugyanezek egy agent `agent.yaml`-jára hatnak, pl.
+`racka config set --agent agents/lamb telegram.enabled false`.
 
 ## Futásidejű környezeti változók
 
 | Változó | Hatás |
 |---|---|
-| `RACKA_RUNTIME_DIR` | a socketek könyvtára (alapértelmezés: `$XDG_RUNTIME_DIR/racka`, ennek hiányában `/tmp/racka-$USER`) |
+| `RACKA_RUNTIME_DIR` | a socketek könyvtára (alapértelmezés: a `runtimeDir` beállítás, majd `$XDG_RUNTIME_DIR/racka`, ennek hiányában `/tmp/racka-$USER`) |
+| `RACKA_CONFIG_DIR` | a felhasználói beállítások mappája (alapértelmezés: `~/.config/racka`, Windowson `%APPDATA%\racka`) |
 | `RACKA_EXECUTABLE` | saját hostból futó CLI engine-ek bridge-parancsa (lásd [Bővítés](extending.md#saját-host)) |
 | `RACKA_AGENT`, `RACKA_TASK_ID` | a Racka beállítja a `claude` és `codex` processznek; hookok és szkriptek olvashatják |
 

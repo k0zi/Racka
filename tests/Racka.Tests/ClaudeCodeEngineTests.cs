@@ -8,7 +8,7 @@ namespace Racka.Tests;
 
 public class ClaudeCodeEngineTests
 {
-    private static readonly PromptOptions Options = new(false, true, false);
+    private static readonly PromptOptions Options = new(false, true);
 
     // A stand-in for the claude CLI: records its arguments and stdin, then prints stream-json.
     private const string FakeClaude = """

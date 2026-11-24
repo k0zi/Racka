@@ -1,3 +1,4 @@
+// Ported from PocketFlow (https://github.com/The-Pocket/PocketFlow), Copyright (c) 2024 Zachary Huang, MIT; see THIRD_PARTY_NOTICES.md.
 namespace HerdFlow;
 
 public class BatchNode : Node

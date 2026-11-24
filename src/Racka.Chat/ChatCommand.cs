@@ -1,6 +1,6 @@
-namespace Racka.Irc;
+namespace Racka.Chat;
 
-public enum IrcCommandKind
+public enum ChatCommandKind
 {
     Task,
     Status,
@@ -9,24 +9,25 @@ public enum IrcCommandKind
     Help
 }
 
-public sealed record IrcCommand(IrcCommandKind Kind, string Text = "");
+public sealed record ChatCommand(ChatCommandKind Kind, string Text = "");
 
-public static class IrcCommandParser
+public static class ChatCommandParser
 {
-    private static readonly Dictionary<string, IrcCommandKind> Keywords = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, ChatCommandKind> Keywords = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["status"] = IrcCommandKind.Status,
-        ["stop"] = IrcCommandKind.Stop,
-        ["reset"] = IrcCommandKind.Reset,
-        ["help"] = IrcCommandKind.Help
+        ["status"] = ChatCommandKind.Status,
+        ["stop"] = ChatCommandKind.Stop,
+        ["reset"] = ChatCommandKind.Reset,
+        ["help"] = ChatCommandKind.Help
     };
 
     /// <summary>
-    /// Channel: "nick: task", "nick, task", "!nick task", "!status [nick]", "!stop [nick]", "!reset [nick]", "!help".
+    /// Channel: "nick: task", "nick, task", "!nick task", "!status [nick]", "!stop [nick]", "!reset [nick]", "!help",
+    /// or any text when the platform reports that the bot was mentioned (the mention already stripped).
     /// Private message: the whole text is the task, unless it is a "!command".
     /// Returns null when the message is not meant for this agent.
     /// </summary>
-    public static IrcCommand? Parse(string text, string nick, string prefix, bool isPrivate)
+    public static ChatCommand? Parse(string text, string nick, string prefix, bool isPrivate, bool mentionsMe = false)
     {
         text = text.Trim();
         if (text.Length == 0)
@@ -37,14 +38,14 @@ public static class IrcCommandParser
             var body = text[prefix.Length..].Trim();
             var (word, rest) = SplitFirst(body);
             if (Keywords.TryGetValue(word, out var kind))
-                return rest.Length == 0 || IsNick(rest, nick) ? new IrcCommand(kind) : null;
+                return rest.Length == 0 || IsNick(rest, nick) ? new ChatCommand(kind) : null;
             if (IsNick(word, nick))
                 return Addressed(rest);
-            return isPrivate ? new IrcCommand(IrcCommandKind.Task, body) : null;
+            return isPrivate || mentionsMe ? new ChatCommand(ChatCommandKind.Task, body) : null;
         }
 
         if (isPrivate)
-            return new IrcCommand(IrcCommandKind.Task, text);
+            return new ChatCommand(ChatCommandKind.Task, text);
 
         foreach (var separator in new[] { ':', ',' })
         {
@@ -52,14 +53,14 @@ public static class IrcCommandParser
             if (idx > 0 && IsNick(text[..idx], nick))
                 return Addressed(text[(idx + 1)..].Trim());
         }
-        return null;
+        return mentionsMe ? Addressed(text) : null;
     }
 
-    private static IrcCommand? Addressed(string rest)
+    private static ChatCommand? Addressed(string rest)
     {
         if (rest.Length == 0)
             return null;
-        return Keywords.TryGetValue(rest, out var kind) ? new IrcCommand(kind) : new IrcCommand(IrcCommandKind.Task, rest);
+        return Keywords.TryGetValue(rest, out var kind) ? new ChatCommand(kind) : new ChatCommand(ChatCommandKind.Task, rest);
     }
 
     private static bool IsNick(string candidate, string nick) =>

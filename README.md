@@ -19,12 +19,12 @@ Claude Code-os reviewertől kér átnézést, a changelogot pedig egy helyi mode
 - **MCP** szervereket hívhatnak (stdio és HTTP),
 - **Claude Code-kompatibilis skilleket** használnak (`SKILL.md`),
 - **hosszú távú memóriájuk** van (Markdown fájlok, indexük a promptban),
-- **IRC-re** csatlakozva parancsot fogadnak és státuszt riportolnak,
+- **chat-platformokra** (IRC, Telegram, Discord, Slack, Teams) csatlakozva feladatot fogadnak és státuszt riportolnak,
 - **kívülről hívhatók**: CLI-ből, shell- és Python-szkriptből, .NET kódból vagy közvetlenül HTTP-n a socketen.
 
 ```mermaid
 flowchart LR
-    you([ember / szkript / IRC]) -->|racka send| shaun
+    you([ember / szkript / chat]) -->|racka send| shaun
     subgraph herd [helyi busz – Unix socketek]
         shaun["shaun<br/>anthropic<br/>koordinátor"]
         merino["merino<br/>codex<br/>fejlesztő"]
@@ -79,7 +79,7 @@ Saját agent: `racka new <név> --engine claude-code|codex|anthropic|openai`. Ez
 | [Együttműködés](docs/collaboration.md) | busz, `send_message`, ask/tell, delegálási minták, HTTP API |
 | [Toolok, skillek, MCP](docs/tools-skills-mcp.md) | beépített toolok, skillek írása, MCP szerverek |
 | [Memória](docs/memory.md) | hosszú távú memória: formátum, toolok, prompt-index |
-| [IRC](docs/irc.md) | parancsok, jogosultság, riport-csatorna |
+| [Chat](docs/chat.md) | IRC, Telegram, Discord, Slack, Teams: beállítás, parancsok, jogosultság, riport-csatorna |
 | [Bővítés](docs/extending.md) | saját tool, saját host, HerdFlow pipeline, új provider |
 | [Üzemeltetés](docs/operations.md) | systemd, naplók, biztonság, hibakeresés |
 
@@ -100,14 +100,15 @@ A [`samples/`](samples/README.md) mappában futtatható minták vannak:
 
 | Parancs | Leírás |
 |---|---|
-| `racka run <agent-dir>` | Agent futtatása előtérben. |
+| `racka run <agent-dir> [--irc-server] [--irc-port] [--irc-tls] [--irc-channel …] [--irc-nick] [--no-chat]` | Agent futtatása előtérben; a kapcsolók erre a futásra felülírják az IRC-beállításokat. |
 | `racka send <agent> <szöveg…> [--wait] [--json] [--timeout s] [-c kulcs] [--from név]` | Feladat küldése. `--wait` nélkül csak sorba állítja; `-` esetén stdinről olvas. |
 | `racka list [--json]` | Futó agentek és állapotuk. |
 | `racka status <agent>` | Egy agent állapota JSON-ban. |
 | `racka cancel <agent>` | Az éppen futó feladat megszakítása. |
 | `racka new <név> [--engine] [--dir]` | Agent sablon létrehozása. |
+| `racka config path\|show\|get\|set\|unset\|init [--agent dir]` | A felhasználói beállítások (`~/.config/racka/config.yaml`) vagy egy `agent.yaml` megtekintése és szerkesztése. |
 
-Minden parancs elfogadja a `--runtime-dir` kapcsolót; alapértéke `$RACKA_RUNTIME_DIR`, ha nincs megadva, akkor `$XDG_RUNTIME_DIR/racka`.
+Minden parancs elfogadja a `--runtime-dir` kapcsolót; alapértéke `$RACKA_RUNTIME_DIR`, ha nincs megadva, akkor a beállítások `runtimeDir` értéke, végül `$XDG_RUNTIME_DIR/racka`.
 Ha `--wait --json` mellett hívod, egy `{"id","success","output","error"}` JSON-t ad vissza, hiba esetén pedig 1-es kóddal lép ki.
 
 ## Projektek
@@ -117,7 +118,7 @@ Ha `--wait --json` mellett hívod, egy `{"id","success","output","error"}` JSON-
 | `src/HerdFlow` | flow-motor (PocketFlow C# port) |
 | `src/Racka.Core` | config, soul, skillek, memória, tool- és provider-interfészek, API tool-loop, busz, inbox, MCP kliens |
 | `src/Racka.Providers` | Anthropic és OpenAI provider, Claude Code és Codex engine, engine-factory |
-| `src/Racka.Irc` | IRC kliens, parancsok, riport |
+| `src/Racka.Chat` | chat-szolgáltatás (parancsok, jogosultság, riport) és a connectorok: IRC, Telegram, Discord, Slack, Teams |
 | `src/Racka.Host` | `racka` CLI, agent host (Kestrel UDS), bridge, scaffold |
 | `samples/dotnet/*` | futtatható minták (a solution `samples` mappájában) |
 | `tests/*` | xUnit tesztek |
@@ -127,7 +128,7 @@ cd src && dotnet build Racka.slnx && dotnet test Racka.slnx
 ```
 
 A tesztek nem hívnak valódi modellt; helyettük fake provider, rögzített HTTP-válaszok, hamis `claude` és `codex` szkriptek,
-egy in-process MCP szerver és egy fake IRC szerver fut. Valódi agent-hostok Unix socketen beszélgetnek egymással.
+egy in-process MCP szerver, egy fake IRC szerver és fake chat-API-k futnak. Valódi agent-hostok Unix socketen beszélgetnek egymással.
 
 ## Verziózás és kiadás
 
@@ -147,3 +148,11 @@ git push origin v26.11.3         # a kiírt tag
 ```
 
 A tagnek egyeznie kell a commitra kiszámolt verzióval, ezért ne kézzel válassz számot: ha eltér, a workflow leáll.
+
+## Licenc
+
+A Racka [MIT licencű](LICENSE). A NuGet-csomag (`racka` dotnet tool) harmadik féltől származó komponenseket is
+tartalmaz (Anthropic és OpenAI SDK, MCP SDK, Discord.Net, Telegram.Bot, Microsoft 365 Agents SDK, …), saját
+licencükkel; a `src/HerdFlow` a [PocketFlow](https://github.com/The-Pocket/PocketFlow) (MIT) C# portja. Részletek:
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) és a [`licenses/`](licenses) mappa. A csomag mindkettőt tartalmazza,
+a telepített tool mellett a `~/.dotnet/tools/.store/racka/<verzió>/racka/<verzió>/` alatt.

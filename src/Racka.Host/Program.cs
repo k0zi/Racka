@@ -4,10 +4,15 @@ using System.Text.Json;
 using Racka.Core.Config;
 using Racka.Core.Messaging;
 using Racka.Host;
+using YamlDotNet.RepresentationModel;
+
+// dotnet tool install runs no code, so the user settings are created on the first run.
+if (args is not ["bridge", ..])
+    Cli.CreateUserSettings();
 
 var runtimeDirOption = new Option<string?>("--runtime-dir")
 {
-    Description = "Directory of the agent sockets (default: $RACKA_RUNTIME_DIR or $XDG_RUNTIME_DIR/racka).",
+    Description = "Directory of the agent sockets (default: $RACKA_RUNTIME_DIR, runtimeDir in the user settings, or $XDG_RUNTIME_DIR/racka).",
     Recursive = true
 };
 var jsonOption = new Option<bool>("--json") { Description = "Print machine readable JSON." };
@@ -17,8 +22,36 @@ root.Options.Add(runtimeDirOption);
 
 // racka run <agent-dir>
 var agentDirArgument = new Argument<DirectoryInfo>("agent-dir") { Description = "Agent directory containing agent.yaml and soul.md." };
-var run = new Command("run", "Run an agent in the foreground.") { agentDirArgument };
-run.SetAction((parse, ct) => Cli.Guard(() => AgentHost.RunAsync(parse.GetValue(agentDirArgument)!.FullName, Paths(parse), ct)));
+var ircServerOption = new Option<string?>("--irc-server") { Description = "IRC server to connect to (overrides irc.server)." };
+var ircPortOption = new Option<int?>("--irc-port") { Description = "IRC port (overrides irc.port)." };
+var ircTlsOption = new Option<bool?>("--irc-tls") { Description = "true or false: connect with TLS (overrides irc.tls)." };
+var ircChannelOption = new Option<string[]>("--irc-channel") { Description = "IRC channel to join; repeat for more (overrides irc.channels)." };
+var ircNickOption = new Option<string?>("--irc-nick") { Description = "IRC nick (overrides irc.nick)." };
+var noChatOption = new Option<bool>("--no-chat") { Description = "Do not connect to any chat platform." };
+var run = new Command("run", "Run an agent in the foreground.") { agentDirArgument, ircServerOption, ircPortOption, ircTlsOption, ircChannelOption, ircNickOption, noChatOption };
+run.SetAction((parse, ct) => Cli.Guard(() =>
+{
+    var overrides = new YamlMappingNode();
+    var irc = new YamlMappingNode();
+    if (parse.GetValue(ircServerOption) is { } server)
+        irc.Add("server", server);
+    if (parse.GetValue(ircPortOption) is { } port)
+        irc.Add("port", port.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    if (parse.GetValue(ircTlsOption) is { } tls)
+        irc.Add("tls", tls ? "true" : "false");
+    if (parse.GetValue(ircChannelOption) is { Length: > 0 } channels)
+        irc.Add("channels", new YamlSequenceNode(channels.Select(c => new YamlScalarNode(c))));
+    if (parse.GetValue(ircNickOption) is { } nick)
+        irc.Add("nick", nick);
+    if (irc.Children.Count > 0)
+        overrides.Add("irc", irc);
+    if (parse.GetValue(noChatOption))
+    {
+        foreach (var section in UserSettings.ChatSections)
+            overrides.Children[new YamlScalarNode(section)] = new YamlMappingNode { { "enabled", "false" } };
+    }
+    return AgentHost.RunAsync(parse.GetValue(agentDirArgument)!.FullName, Paths(parse), ct, overrides);
+}));
 root.Subcommands.Add(run);
 
 // racka send <agent> <text...>
@@ -77,9 +110,12 @@ list.SetAction((parse, ct) => Cli.Guard(async () =>
         Console.WriteLine("No agents are running.");
         return 0;
     }
-    Console.WriteLine($"{"NAME",-16} {"ENGINE",-12} {"MODEL",-20} {"STATE",-6} {"QUEUE",5} {"DONE",5} {"FAIL",5} {"IRC",-4} PID");
+    Console.WriteLine($"{"NAME",-16} {"ENGINE",-12} {"MODEL",-20} {"STATE",-6} {"QUEUE",5} {"DONE",5} {"FAIL",5} {"CHAT",-14} PID");
     foreach (var a in agents)
-        Console.WriteLine($"{a.Name,-16} {a.Engine,-12} {a.Model ?? "-",-20} {a.State,-6} {a.QueueLength,5} {a.CompletedTasks,5} {a.FailedTasks,5} {(a.IrcConnected ? "yes" : "-"),-4} {a.ProcessId}");
+    {
+        var chat = a.Chat ?? (a.IrcConnected ? ["irc"] : []);
+        Console.WriteLine($"{a.Name,-16} {a.Engine,-12} {a.Model ?? "-",-20} {a.State,-6} {a.QueueLength,5} {a.CompletedTasks,5} {a.FailedTasks,5} {(chat.Count == 0 ? "-" : string.Join(',', chat)),-14} {a.ProcessId}");
+    }
     return 0;
 }));
 root.Subcommands.Add(list);
@@ -121,6 +157,72 @@ create.SetAction(parse => Cli.Guard(() =>
 }).GetAwaiter().GetResult());
 root.Subcommands.Add(create);
 
+// racka config …
+var configAgentOption = new Option<DirectoryInfo?>("--agent", "-a") { Description = "Edit this agent's agent.yaml instead of the user settings.", Recursive = true };
+var configKey = new Argument<string>("key") { Description = "Dotted key, e.g. irc.server or telegram.operators." };
+var configValue = new Argument<string>("value") { Description = "New value; lists take comma separated items (\"#a,#b\")." };
+var forceOption = new Option<bool>("--force") { Description = "Overwrite an existing file." };
+var configCommand = new Command("config", "Show or change the user settings (~/.config/racka/config.yaml) or an agent's agent.yaml.") { configAgentOption };
+
+var configPath = new Command("path", "Print the path of the settings file.");
+configPath.SetAction(parse => Cli.Run(() =>
+{
+    Console.WriteLine(OpenConfig(parse).Path);
+    return 0;
+}));
+var configShow = new Command("show", "Print the settings file.");
+configShow.SetAction(parse => Cli.Run(() =>
+{
+    var path = OpenConfig(parse).Path;
+    if (!File.Exists(path))
+        return Cli.Fail($"{path} does not exist yet; create it with racka config init.");
+    Console.Write(File.ReadAllText(path));
+    return 0;
+}));
+var configInit = new Command("init", "Write the commented user settings template.") { forceOption };
+configInit.SetAction(parse => Cli.Run(() =>
+{
+    var path = RackaDirectories.ConfigFile;
+    if (parse.GetValue(forceOption) && File.Exists(path))
+        File.Delete(path);
+    Console.WriteLine(UserSettings.EnsureCreated(path) ? $"Created {path}" : $"{path} already exists (use --force to overwrite it).");
+    return 0;
+}));
+var configGet = new Command("get", "Print one value.") { configKey };
+configGet.SetAction(parse => Cli.Run(() =>
+{
+    var value = OpenConfig(parse).Get(parse.GetValue(configKey)!);
+    if (value == null)
+        return 1;
+    Console.WriteLine(value);
+    return 0;
+}));
+var configSet = new Command("set", "Set one value (rewrites the file without its comments).") { configKey, configValue };
+configSet.SetAction(parse => Cli.Run(() =>
+{
+    var editor = OpenConfig(parse);
+    editor.Set(parse.GetValue(configKey)!, parse.GetValue(configValue)!);
+    editor.Save();
+    Console.WriteLine($"{parse.GetValue(configKey)} set in {editor.Path}");
+    return 0;
+}));
+var configUnset = new Command("unset", "Remove one value.") { configKey };
+configUnset.SetAction(parse => Cli.Run(() =>
+{
+    var editor = OpenConfig(parse);
+    if (!editor.Unset(parse.GetValue(configKey)!))
+        return Cli.Fail($"{parse.GetValue(configKey)} is not set in {editor.Path}.");
+    editor.Save();
+    return 0;
+}));
+configCommand.Subcommands.Add(configPath);
+configCommand.Subcommands.Add(configShow);
+configCommand.Subcommands.Add(configInit);
+configCommand.Subcommands.Add(configGet);
+configCommand.Subcommands.Add(configSet);
+configCommand.Subcommands.Add(configUnset);
+root.Subcommands.Add(configCommand);
+
 // racka bridge --agent <name> (started by Claude Code)
 var bridgeAgent = new Option<string>("--agent") { Description = "Agent whose tools to expose.", Required = true };
 var bridge = new Command("bridge", "Internal: MCP stdio bridge that Claude Code and Codex agents use to reach Racka tools.") { bridgeAgent };
@@ -130,7 +232,10 @@ root.Subcommands.Add(bridge);
 
 return await root.Parse(args).InvokeAsync();
 
-BusPaths Paths(ParseResult parse) => new(parse.GetValue(runtimeDirOption));
+BusPaths Paths(ParseResult parse) => BusPaths.Resolve(parse.GetValue(runtimeDirOption), UserSettings.Load().RuntimeDir);
+
+ConfigEditor OpenConfig(ParseResult parse) =>
+    parse.GetValue(configAgentOption) is { } agentDir ? ConfigEditor.OpenAgent(agentDir.FullName) : ConfigEditor.OpenUserSettings();
 
 internal static class Cli
 {
@@ -151,6 +256,21 @@ internal static class Cli
         catch (OperationCanceledException)
         {
             return 130;
+        }
+    }
+
+    public static int Run(Func<int> action) => Guard(() => Task.FromResult(action())).GetAwaiter().GetResult();
+
+    public static void CreateUserSettings()
+    {
+        try
+        {
+            if (UserSettings.EnsureCreated())
+                Console.Error.WriteLine($"racka: created the user settings in {RackaDirectories.ConfigFile} (racka config --help)");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine($"racka: could not create {RackaDirectories.ConfigFile}: {e.Message}");
         }
     }
 

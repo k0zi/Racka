@@ -8,7 +8,7 @@ egymást, és HTTP/JSON-ban beszélnek. A könyvtár `0700`, a socketek `0600` j
 felhasználód érheti el őket.
 
 Minden agentnek egy inboxa van, és egyszerre egy feladatot futtat; a többi sorba áll. A feladat forrása a
-CLI (`racka send`), egy másik agent (`send_message`) vagy IRC lehet. Mindhárom ugyanabba a sorba kerül.
+CLI (`racka send`), egy másik agent (`send_message`) vagy egy chat-platform (IRC, Telegram, Discord, Slack, Teams) lehet. Mind ugyanabba a sorba kerül.
 
 ## `send_message`
 
@@ -32,7 +32,7 @@ az API engine-ek pedig a beszélgetést tartják meg.
 - **Ask:** akkor kell, ha a válasz nélkül nem tudsz továbblépni („írd meg, és mondd meg, melyik paranccsal futnak a tesztek”).
   A kérdező agent addig vár, a saját inboxa közben sorban áll.
 - **Tell:** akkor kell, ha a munka eredménye nem a feladóhoz jut vissza, hanem máshová („írd meg a changelogot, és küldd el Dollynak”,
-  „riportolj az IRC-re, ha kész”). A címzett a végén maga küld üzenetet a megfelelő agentnek.
+  „riportolj a chatre, ha kész”). A címzett a végén maga küld üzenetet a megfelelő agentnek.
 
 ### Holtpont-védelem
 
@@ -56,7 +56,7 @@ Ez rugalmas: a koordinátor menet közben dönti el a lépéseket.
 **Peer review.** A fejlesztő maga kér review-t (Merino → Dolly). Legyen a fejlesztő és a reviewer különböző
 motoron, így két különböző modell nézi meg ugyanazt a kódot.
 
-**Futószalag (tell-lánc).** Az A agent tell-lel továbbadja a munkát B-nek, aki C-nek, és az utolsó jelent IRC-re vagy
+**Futószalag (tell-lánc).** Az A agent tell-lel továbbadja a munkát B-nek, aki C-nek, és az utolsó jelent a chatre vagy
 egy riport-agentnek. Senki nem vár, és minden lépés a saját sorában fut.
 
 **Rögzített pipeline kódból.** Ha minden alkalommal ugyanazok a lépések kellenek, a sorrendet ne a modell
@@ -103,7 +103,7 @@ Minden agent socketje ugyanezt az API-t adja. A JSON mezőnevek camelCase-ek, a 
 | `conversationKey` | elhagyható; alapértéke `bus:<from>` |
 | `timeoutSeconds` | ask esetén; alapértéke 600 |
 | `chain` | a várakozó agentek, a holtpont-védelemhez; külső hívónál üres |
-| `source` | `cli`, `bus` vagy `irc`; az agent a feladat fejlécében látja |
+| `source` | `cli`, `bus`, vagy a chat-platform neve (`irc`, `telegram`, …); az agent a feladat fejlécében látja |
 
 Válasz (`200`):
 
@@ -118,7 +118,7 @@ viszont tovább fut. Hibás kérésre (rossz címzett, üres szöveg) `400` a v�
 
 | Végpont | Leírás |
 |---|---|
-| `GET /status` | `name, engine, model, state, currentTaskId, currentTaskFrom, queueLength, startedAt, processId, ircConnected, completedTasks, failedTasks` |
+| `GET /status` | `name, engine, model, state, currentTaskId, currentTaskFrom, queueLength, startedAt, processId, ircConnected, completedTasks, failedTasks, chat` (a `chat` a csatlakozott platformok listája) |
 | `POST /cancel` | megszakítja a futó feladatot (a CLI engine-eknél a teljes processzfát leállítja) |
 | `GET /tools` | a bridge-en elérhető toolok: `[{name, description, inputSchema}]` |
 | `POST /tools/invoke` | `{"name":"memory_search","arguments":{"query":"x"}}` → `{"content","isError"}` |

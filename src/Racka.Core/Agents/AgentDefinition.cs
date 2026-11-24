@@ -1,8 +1,7 @@
 using Racka.Core.Config;
 using Racka.Core.Memory;
 using Racka.Core.Skills;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
+using YamlDotNet.RepresentationModel;
 
 namespace Racka.Core.Agents;
 
@@ -24,7 +23,8 @@ public sealed class AgentDefinition
     public string StateDirectory => Path.Combine(Directory, "state");
     public string SkillsDirectory => Path.Combine(Directory, "skills");
 
-    public static AgentDefinition Load(string agentDirectory, Func<string, string?>? envLookup = null)
+    /// <param name="layers">User settings below agent.yaml and command line overrides above it (chat sections only).</param>
+    public static AgentDefinition Load(string agentDirectory, Func<string, string?>? envLookup = null, ConfigLayers? layers = null)
     {
         var dir = Path.GetFullPath(agentDirectory);
         var configPath = Path.Combine(dir, ConfigFileName);
@@ -34,7 +34,10 @@ public sealed class AgentDefinition
         if (!File.Exists(soulPath))
             throw new ConfigException($"Missing {SoulFileName} in '{dir}'. Every agent needs a soul.");
 
-        var config = ParseConfig(File.ReadAllText(configPath), envLookup);
+        var yaml = File.ReadAllText(configPath);
+        if (layers != null)
+            yaml = ApplyLayers(yaml, configPath, layers);
+        var config = ParseConfig(yaml, envLookup);
         if (string.IsNullOrWhiteSpace(config.Name))
             config.Name = Path.GetFileName(dir);
         Validate(config);
@@ -55,10 +58,7 @@ public sealed class AgentDefinition
 
     public static AgentConfig ParseConfig(string yaml, Func<string, string?>? envLookup = null)
     {
-        var deserializer = new DeserializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .WithNodeDeserializer(new EnvExpandingStringDeserializer(envLookup), s => s.OnTop())
-            .Build();
+        var deserializer = RackaYaml.Deserializer(envLookup);
         try
         {
             return deserializer.Deserialize<AgentConfig>(yaml) ?? new AgentConfig();
@@ -87,12 +87,50 @@ public sealed class AgentDefinition
             if (server.IsStdio == !string.IsNullOrEmpty(server.Url))
                 throw new ConfigException($"MCP server '{name}' needs exactly one of 'command' or 'url'.");
         }
-        if (config.Irc is { } irc)
+        foreach (var chat in config.ChatConnections)
         {
-            if (string.IsNullOrWhiteSpace(irc.Server))
-                throw new ConfigException("irc.server is required when irc is configured.");
-            if (string.IsNullOrWhiteSpace(irc.Nick))
-                irc.Nick = config.Name;
+            chat.ApplyAgentName(config.Name);
+            if (chat.MaxReplyLines < 1)
+                throw new ConfigException($"{chat.Platform}.maxReplyLines must be at least 1.");
+        }
+        if (config.Irc is { Enabled: true } irc && string.IsNullOrWhiteSpace(irc.Server))
+            throw new ConfigException("irc.server is required when irc is configured (in agent.yaml or the user settings).");
+        if (config.Teams is { Enabled: true } teams)
+        {
+            if (string.IsNullOrWhiteSpace(teams.AppId) || string.IsNullOrWhiteSpace(teams.TenantId))
+                throw new ConfigException("teams.appId and teams.tenantId are required when teams is configured.");
+            if (teams.Port is < 1 or > 65535)
+                throw new ConfigException("teams.port must be between 1 and 65535.");
         }
     }
+
+    /// <summary>Merges the chat sections: user settings, then agent.yaml, then overrides, field by field.</summary>
+    internal static string ApplyLayers(string agentYaml, string source, ConfigLayers layers)
+    {
+        // Nothing to merge: keep agent.yaml exactly as written.
+        if (!UserSettings.ChatSections.Any(s => HasKey(layers.Defaults, s) || HasKey(layers.Overrides, s)))
+            return agentYaml;
+        var root = RackaYaml.LoadMapping(agentYaml, source);
+        foreach (var section in UserSettings.ChatSections)
+        {
+            var key = new YamlScalarNode(section);
+            YamlNode? node = null;
+            foreach (var layer in new[] { layers.Defaults, root, layers.Overrides })
+            {
+                if (layer != null && layer.Children.TryGetValue(key, out var value))
+                    node = node == null ? value : RackaYaml.Merge(node, value);
+            }
+            if (node != null)
+                root.Children[key] = node;
+        }
+        return RackaYaml.Save(root);
+
+        static bool HasKey(YamlMappingNode? mapping, string key) => mapping?.Children.ContainsKey(new YamlScalarNode(key)) == true;
+    }
+}
+
+/// <summary>YAML layers around an agent's own agent.yaml: user settings below it, command line overrides above it.</summary>
+public sealed record ConfigLayers(YamlMappingNode? Defaults = null, YamlMappingNode? Overrides = null)
+{
+    public static ConfigLayers From(UserSettings settings, YamlMappingNode? overrides = null) => new(settings.Root, overrides);
 }

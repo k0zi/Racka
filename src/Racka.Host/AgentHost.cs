@@ -1,4 +1,5 @@
 using System.Reflection;
+using Racka.Chat;
 using Racka.Core.Agents;
 using Racka.Core.Config;
 using Racka.Core.Engine;
@@ -8,20 +9,21 @@ using Racka.Core.Messaging;
 using Racka.Core.Runtime;
 using Racka.Core.Skills;
 using Racka.Core.Tools;
-using Racka.Irc;
 using Racka.Providers;
 using Racka.Providers.ClaudeCode;
+using YamlDotNet.RepresentationModel;
 
 namespace Racka.Host;
 
 public delegate IAgentEngine EngineFactory(AgentDefinition agent, IReadOnlyList<IRackaTool> tools, IAgentEvents events,
     PromptOptions promptOptions, BridgeCommand? bridge);
 
-/// <summary>Composes and runs one agent process: engine, inbox, bus socket and IRC.</summary>
+/// <summary>Composes and runs one agent process: engine, inbox, bus socket and chat connections.</summary>
 public static class AgentHost
 {
-    public static Task<int> RunAsync(string agentDirectory, BusPaths paths, CancellationToken ct) =>
-        RunAsync(AgentDefinition.Load(agentDirectory), paths, AgentEngineFactory.Create, ct);
+    /// <param name="overrides">Chat sections laid over agent.yaml, e.g. from `racka run --irc-server`.</param>
+    public static Task<int> RunAsync(string agentDirectory, BusPaths paths, CancellationToken ct, YamlMappingNode? overrides = null) =>
+        RunAsync(AgentDefinition.Load(agentDirectory, layers: ConfigLayers.From(UserSettings.Load(), overrides)), paths, AgentEngineFactory.Create, ct);
 
     /// <param name="extraTools">Custom tools for this agent. Every engine can call them; the CLI engines through the bridge.</param>
     public static async Task<int> RunAsync(AgentDefinition agent, BusPaths paths, EngineFactory engineFactory, CancellationToken ct,
@@ -54,11 +56,11 @@ public static class AgentHost
 
         // Tools every engine can use; the CLI engines reach them through the bridge.
         var bridgedTools = new List<IRackaTool> { new SendMessageTool(bus, agent.Name), new ListAgentsTool(bus, agent.Name) };
-        await using var irc = agent.Config.Irc is { } ircConfig
-            ? new IrcService(ircConfig, agent.Name, events, app.Services.GetRequiredService<ILoggerFactory>())
-            : null;
-        if (irc != null)
-            bridgedTools.Add(new IrcReportTool(irc));
+        var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+        var connectors = ChatConnectors.Create(agent, loggerFactory);
+        await using var chat = connectors.Count > 0 ? new ChatService(connectors, events, loggerFactory.CreateLogger($"racka.{agent.Name}.chat")) : null;
+        if (chat != null)
+            bridgedTools.Add(new ChatReportTool(chat));
         if (agent.Memory != null)
             bridgedTools.AddRange(MemoryTools.Create(agent.Memory));
         // Claude Code discovers skills natively; every other engine loads them with these tools.
@@ -66,7 +68,7 @@ public static class AgentHost
             bridgedTools.AddRange([new LoadSkillTool(agent.Skills), new ReadSkillFileTool(agent.Skills)]);
         bridgedTools.AddRange(extraTools ?? []);
 
-        await using var mcp = new McpClientManager(app.Services.GetRequiredService<ILoggerFactory>());
+        await using var mcp = new McpClientManager(loggerFactory);
         var engineTools = new List<IRackaTool>(bridgedTools);
         if (!agent.Config.EngineKind.IsCli())
         {
@@ -75,13 +77,13 @@ public static class AgentHost
         }
         Directory.CreateDirectory(agent.WorkDirectory);
 
-        var promptOptions = new PromptOptions(IncludeSkillIndex: true, CanMessageAgents: true, HasIrc: irc != null);
+        var promptOptions = new PromptOptions(IncludeSkillIndex: true, CanMessageAgents: true, ChatPlatforms: chat?.Platforms);
         await using var engine = engineFactory(agent, engineTools, events, promptOptions, ResolveBridge(agent.Name, paths));
         var runtime = new AgentRuntime(agent, engine, events);
-        if (irc != null)
+        if (chat != null)
         {
-            runtime.IrcConnected = () => irc.IsConnected;
-            irc.Attach(runtime);
+            runtime.ChatConnected = () => chat.ConnectedPlatforms;
+            chat.Attach(runtime);
         }
 
         BusEndpoints.Map(app, runtime, bridgedTools);
@@ -92,7 +94,7 @@ public static class AgentHost
             File.SetUnixFileMode(socketPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         logger.LogInformation("Agent {Agent} ({Engine}) listening on {Socket}", agent.Name, agent.Config.Engine, socketPath);
 
-        var ircTask = irc?.RunAsync(stopping.Token) ?? Task.CompletedTask;
+        var chatTask = chat?.RunAsync(stopping.Token) ?? Task.CompletedTask;
         try
         {
             await runtime.RunAsync(stopping.Token);
@@ -100,7 +102,7 @@ public static class AgentHost
         finally
         {
             await app.StopAsync(CancellationToken.None);
-            await ircTask.WaitAsync(TimeSpan.FromSeconds(5)).ContinueWith(_ => { });
+            await chatTask.WaitAsync(TimeSpan.FromSeconds(5)).ContinueWith(_ => { });
             TryDelete(socketPath);
         }
         return 0;

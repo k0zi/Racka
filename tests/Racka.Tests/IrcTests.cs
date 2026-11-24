@@ -5,7 +5,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Racka.Core.Config;
 using Racka.Core.Engine;
 using Racka.Core.Runtime;
-using Racka.Irc;
+using Racka.Chat;
+using Racka.Chat.Irc;
 
 namespace Racka.Tests;
 
@@ -29,18 +30,18 @@ public class IrcTests
     }
 
     [Theory]
-    [InlineData("dolly: count files", false, IrcCommandKind.Task, "count files")]
-    [InlineData("Dolly, count files", false, IrcCommandKind.Task, "count files")]
-    [InlineData("!dolly count files", false, IrcCommandKind.Task, "count files")]
-    [InlineData("!status", false, IrcCommandKind.Status, "")]
-    [InlineData("!stop dolly", false, IrcCommandKind.Stop, "")]
-    [InlineData("dolly: reset", false, IrcCommandKind.Reset, "")]
-    [InlineData("!help", false, IrcCommandKind.Help, "")]
-    [InlineData("just do it", true, IrcCommandKind.Task, "just do it")]
-    [InlineData("!status", true, IrcCommandKind.Status, "")]
-    public void ParsesCommandsForMe(string text, bool isPrivate, IrcCommandKind kind, string task)
+    [InlineData("dolly: count files", false, ChatCommandKind.Task, "count files")]
+    [InlineData("Dolly, count files", false, ChatCommandKind.Task, "count files")]
+    [InlineData("!dolly count files", false, ChatCommandKind.Task, "count files")]
+    [InlineData("!status", false, ChatCommandKind.Status, "")]
+    [InlineData("!stop dolly", false, ChatCommandKind.Stop, "")]
+    [InlineData("dolly: reset", false, ChatCommandKind.Reset, "")]
+    [InlineData("!help", false, ChatCommandKind.Help, "")]
+    [InlineData("just do it", true, ChatCommandKind.Task, "just do it")]
+    [InlineData("!status", true, ChatCommandKind.Status, "")]
+    public void ParsesCommandsForMe(string text, bool isPrivate, ChatCommandKind kind, string task)
     {
-        var command = IrcCommandParser.Parse(text, "dolly", "!", isPrivate);
+        var command = ChatCommandParser.Parse(text, "dolly", "!", isPrivate);
         Assert.NotNull(command);
         Assert.Equal(kind, command.Kind);
         Assert.Equal(task, command.Text);
@@ -53,7 +54,7 @@ public class IrcTests
     [InlineData("hello everyone")]
     [InlineData("dolly:")]
     public void IgnoresMessagesForOthers(string text) =>
-        Assert.Null(IrcCommandParser.Parse(text, "dolly", "!", isPrivate: false));
+        Assert.Null(ChatCommandParser.Parse(text, "dolly", "!", isPrivate: false));
 
     [Theory]
     [InlineData("k0zi!~k@host.example.net", "k0zi!*@*.example.net", true)]
@@ -93,10 +94,11 @@ public class IrcTests
             Channels = ["#racka"], ReportChannel = "#status", Operators = ["k0zi!*@*"]
         };
         var events = new AgentEventHub();
-        await using var irc = new IrcService(config, "dolly", events, NullLoggerFactory.Instance);
+        config.ApplyAgentName("dolly");
+        await using var irc = new ChatService([new IrcConnector(config, "dolly", NullLoggerFactory.Instance)], events, NullLogger.Instance);
         var provider = new FakeLlmProvider(conv => FakeLlmProvider.Text($"I counted {conv.Messages.Count} message(s)."));
         var agent = TestAgents.Create();
-        var runtime = new AgentRuntime(agent, new Racka.Core.Engine.ApiLoop.ApiLoopEngine(agent, provider, [], events, new PromptOptions(false, false, true)), events);
+        var runtime = new AgentRuntime(agent, new Racka.Core.Engine.ApiLoop.ApiLoopEngine(agent, provider, [], events, new PromptOptions(false, false, ["irc"])), events);
         irc.Attach(runtime);
         using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var runtimeTask = runtime.RunAsync(stop.Token);

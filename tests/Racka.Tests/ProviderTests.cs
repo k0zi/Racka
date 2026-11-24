@@ -12,7 +12,7 @@ namespace Racka.Tests;
 
 public class ProviderTests
 {
-    private static readonly PromptOptions Options = new(true, false, false);
+    private static readonly PromptOptions Options = new(true, false);
 
     private const string AnthropicToolUse = """
         {"id":"msg_1","type":"message","role":"assistant","model":"claude-opus-5-5",

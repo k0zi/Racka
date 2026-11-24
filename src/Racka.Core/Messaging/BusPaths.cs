@@ -12,6 +12,16 @@ public sealed class BusPaths
 
     public string RuntimeDirectory { get; }
 
+    /// <summary>Precedence: --runtime-dir, then $RACKA_RUNTIME_DIR, then runtimeDir in the user settings, then the default.</summary>
+    public static BusPaths Resolve(string? commandLine, string? userSetting)
+    {
+        if (!string.IsNullOrEmpty(commandLine))
+            return new BusPaths(commandLine);
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RACKA_RUNTIME_DIR")) && !string.IsNullOrEmpty(userSetting))
+            return new BusPaths(userSetting);
+        return new BusPaths();
+    }
+
     /// <summary>Unix socket paths are limited to 108 bytes including the terminating NUL on Linux.</summary>
     private const int MaxSocketPathBytes = 107;
 

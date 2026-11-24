@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Racka.Irc;
+namespace Racka.Chat.Irc;
 
 /// <summary>A parsed IRC protocol line: [@tags] [:prefix] COMMAND [params] [:trailing].</summary>
 public sealed record IrcMessage(string? Prefix, string Command, IReadOnlyList<string> Parameters)

@@ -7,7 +7,7 @@ namespace Racka.Tests;
 
 public class ApiLoopEngineTests
 {
-    private static readonly PromptOptions Options = new(IncludeSkillIndex: true, CanMessageAgents: false, HasIrc: false);
+    private static readonly PromptOptions Options = new(IncludeSkillIndex: true, CanMessageAgents: false);
 
     private static ApiLoopEngine Engine(FakeLlmProvider provider, int maxIterations = 5, params IRackaTool[] tools) =>
         new(TestAgents.Create(maxIterations: maxIterations), provider, tools, NullAgentEvents.Instance, Options);

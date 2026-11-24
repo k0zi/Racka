@@ -7,7 +7,7 @@ namespace Racka.Host;
 
 /// <summary>
 /// `racka bridge`: a stdio MCP server started by Claude Code. It exposes the agent's built-in
-/// Racka tools (send_message, list_agents, irc_report) and forwards calls to the agent socket.
+/// Racka tools (send_message, list_agents, chat_report) and forwards calls to the agent socket.
 /// </summary>
 internal static class BridgeServer
 {

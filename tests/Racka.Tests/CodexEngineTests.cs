@@ -9,7 +9,7 @@ namespace Racka.Tests;
 
 public class CodexEngineTests
 {
-    private static readonly PromptOptions Options = new(true, true, false);
+    private static readonly PromptOptions Options = new(true, true);
 
     // A stand-in for the codex CLI: records its arguments and stdin, then prints `codex exec --json` events.
     private const string FakeCodex = """
