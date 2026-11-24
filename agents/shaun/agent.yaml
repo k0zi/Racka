@@ -1,0 +1,17 @@
+# Shaun – coordinator on the Claude API. He plans, delegates and merges the answers; no file access.
+name: shaun
+engine: anthropic
+model: claude-opus-5-5
+effort: medium
+maxIterations: 30
+skills: [status-report]
+mcpServers: {}
+  # Any stdio or HTTP MCP server works, for example:
+  # everything: { command: npx, args: ["-y", "@modelcontextprotocol/server-everything"] }
+  # docs: { url: https://example.com/mcp, headers: { Authorization: "Bearer ${DOCS_TOKEN}" } }
+# irc:
+#   server: irc.libera.chat
+#   nick: shaun-racka
+#   channels: ["#racka-farm"]
+#   reportChannel: "#racka-farm-status"
+#   operators: ["yournick!*@your.host"]

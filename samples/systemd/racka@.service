@@ -1,0 +1,24 @@
+# systemd user unit: one instance per agent.
+#
+#   cp samples/systemd/racka@.service ~/.config/systemd/user/
+#   # edit the two %h/Racka paths below, put secrets in ~/.config/racka/<agent>.env
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now racka@shaun racka@dolly racka@merino racka@lamb
+#   journalctl --user -u racka@shaun -f
+#
+# Installed as a dotnet tool: ExecStart=%h/.dotnet/tools/racka …; if .NET itself lives in ~/.dotnet
+# (dotnet-install script, not the distro package), also add Environment=DOTNET_ROOT=%h/.dotnet.
+[Unit]
+Description=Racka agent %i
+After=network-online.target
+
+[Service]
+# Secrets such as ANTHROPIC_API_KEY or DOLLY_IRC_PASSWORD, one KEY=value per line (chmod 600).
+EnvironmentFile=-%h/.config/racka/%i.env
+WorkingDirectory=%h/Racka
+ExecStart=%h/.local/bin/racka run %h/Racka/agents/%i
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

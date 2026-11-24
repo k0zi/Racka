@@ -1,0 +1,8 @@
+name: shepherd
+# The custom tools work with every engine; switch with SHEPHERD_ENGINE=anthropic|codex|claude-code.
+engine: ${SHEPHERD_ENGINE:-openai}
+model: ${SHEPHERD_MODEL:-qwen3:8b}
+openai:
+  baseUrl: ${OLLAMA_BASE_URL:-http://localhost:11434/v1}
+maxIterations: 10
+workdir: ./workspace

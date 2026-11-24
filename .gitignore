@@ -1,0 +1,14 @@
+bin/
+obj/
+.idea/
+*.user
+TestResults/
+
+# Agent runtime data
+agents/*/state/
+agents/*/workspace/
+agents/*/memory/
+
+# Shared workspace of the example herd and herd.sh runtime files
+/workspace/
+/.herd/

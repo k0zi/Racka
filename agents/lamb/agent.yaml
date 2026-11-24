@@ -1,0 +1,11 @@
+# Lamb – writer on a local OpenAI compatible server (Ollama by default). No API costs, data stays local.
+name: lamb
+engine: openai
+model: ${LAMB_MODEL:-qwen3:8b}          # needs a model with tool calling support
+openai:
+  baseUrl: ${LAMB_BASE_URL:-http://localhost:11434/v1}   # LM Studio: http://localhost:1234/v1
+  apiKeyEnv: LAMB_API_KEY                                # local servers usually ignore the key
+maxTokens: 4000
+maxIterations: 10
+skills: [changelog]
+mcpServers: {}

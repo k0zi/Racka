@@ -1,0 +1,34 @@
+# Dolly – reviewer and investigator on Claude Code. Shares the workspace with Merino.
+name: dolly
+engine: claude-code
+model: claude-opus-5-5
+effort: high
+workdir: ../../workspace
+claudeCode:
+  # dontAsk: anything not listed below is refused (print mode cannot ask anyway).
+  # The Racka tools (send_message, memory_*, …) are always allowed.
+  permissionMode: dontAsk
+  allowedTools:
+    - Read
+    - Grep
+    - Glob
+    - "Bash(ls:*)"
+    - "Bash(wc:*)"
+    - "Bash(git status:*)"
+    - "Bash(git diff:*)"
+    - "Bash(git log:*)"
+    - "Bash(python3 -m pytest:*)"
+    - "Bash(pytest:*)"
+    - "Bash(dotnet test:*)"
+  maxBudgetUsd: 2.0
+mcpServers: {}
+skills: [code-review, status-report]
+# irc:
+#   server: irc.libera.chat
+#   port: 6697
+#   tls: true
+#   nick: dolly-racka
+#   channels: ["#racka-farm"]
+#   reportChannel: "#racka-farm-status"
+#   operators: ["yournick!*@your.host"]
+#   saslPasswordEnv: DOLLY_IRC_PASSWORD

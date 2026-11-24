@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="../samples/dotnet/CustomTool/CustomTool.csproj" />
+    <Project Path="../samples/dotnet/ExternalClient/ExternalClient.csproj" />
+    <Project Path="../samples/dotnet/ReviewPipeline/ReviewPipeline.csproj" />
+  </Folder>
+  <Project Path="../tests/HerdFlow.Tests/HerdFlow.Tests.csproj" />
+  <Project Path="../tests/Racka.Tests/Racka.Tests.csproj" />
+  <Project Path="HerdFlow/HerdFlow.csproj" />
+  <Project Path="Racka.Core/Racka.Core.csproj" />
+  <Project Path="Racka.Host/Racka.Host.csproj" />
+  <Project Path="Racka.Irc/Racka.Irc.csproj" />
+  <Project Path="Racka.Providers/Racka.Providers.csproj" />
+</Solution>

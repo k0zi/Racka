@@ -1,0 +1,12 @@
+# Merino – implementer on the OpenAI Codex CLI. Shares the workspace with Dolly.
+name: merino
+engine: codex
+# model: ...                  # default: the model set in ~/.codex/config.toml
+effort: high
+workdir: ../../workspace
+codex:
+  sandbox: workspace-write    # writes only inside the workspace
+  approvalPolicy: never       # exec mode cannot ask; the sandbox is the limit
+  # ignoreUserConfig: true    # skip ~/.codex/config.toml (and its MCP servers)
+mcpServers: {}
+skills: [status-report]
